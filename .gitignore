@@ -4,5 +4,5 @@ dist
 .env
 
 db.json
-needies.json
-targets.json
+gifts.json
+givers.json

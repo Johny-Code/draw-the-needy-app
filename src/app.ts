@@ -2,9 +2,9 @@ import chalk from 'chalk'
 import 'dotenv-defaults/config'
 
 import { createMailer } from './services/mailer'
-import { getRandomNeedy } from './services/needies'
-import { getState, saveGeneratedNeedyToState } from './services/state'
+import { getState, saveGiftsToState } from './services/state'
 import { getEmailTargets } from './services/emailTargets'
+import { generateGifts } from './services/gifts'
 
 const main = async (): Promise<void> => {
   if (process.env.DEBUG) {
@@ -19,32 +19,27 @@ const main = async (): Promise<void> => {
   }
 
   const state = await getState()
-  const generatedNeedy = await getRandomNeedy(state)
+  const generatedGifts = await generateGifts(state)
 
-  console.log(
-    '🥳',
-    chalk.green(chalk.bold(generatedNeedy.name)),
-    'is a Needy of the following week!'
-  )
+  console.log(generatedGifts)
 
+  await saveGiftsToState(state, generatedGifts)
   if (process.env.DEBUG) return
 
   const mailer = createMailer(process.env.MAIL_USERNAME, process.env.MAIL_PASSWORD)
   mailer.sendMail({
     from: `DrawTheNeedyApp <${process.env.MAIL_USERNAME}>`,
     to: await getEmailTargets(),
-    subject: `🥳 ${generatedNeedy.name} is a Needy of the following week!`,
+    subject: `🥳 ${'$NAME'} is a Needy of the following week!`,
     content: `
       <h1>Greetings fellow friend!</h1>
-      <p>🥳 &nbsp;<b>${generatedNeedy.name}</b> is a Needy of the following week!</p>
+      <p>🥳 &nbsp;<b>${'$NAME'}</b> is a Needy of the following week!</p>
       <p>See ya next time!</p>
       <hr />
       <small>This email was sent to you, because Jan Tobolewski added your email to this notification, contact him if you don't want to hear about it</small>
       `,
   })
   console.log(chalk.blue('Emails were sent!'))
-
-  await saveGeneratedNeedyToState(state, generatedNeedy)
 }
 
 const handleError = (error: Error) => {

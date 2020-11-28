@@ -1,14 +1,17 @@
 import fs from 'fs'
 import util from 'util'
-import { GeneratedNeedy } from '../interfaces/Needy'
+
+import { GeneratedGift } from '../interfaces/Gift'
+import { Item } from '../interfaces/Items'
 import { State } from '../interfaces/State'
+import { getAllGifts } from './gifts'
 
 const readFile = util.promisify(fs.readFile)
 const writeFile = util.promisify(fs.writeFile)
 
 const INITIAL_STATE: State = {
-  lastGeneratedAt: 0,
-  previouslyGenerated: [],
+  itemsStatus: [],
+  history: [],
 }
 
 const initState = async (): Promise<State> => {
@@ -24,14 +27,32 @@ const initState = async (): Promise<State> => {
 export const saveState = async (newState: State): Promise<void> =>
   writeFile(process.env.DB_FILE, JSON.stringify(newState, null, 2), 'utf8')
 
-export const saveGeneratedNeedyToState = async (
+export const saveGiftsToState = async (
   currentState: State,
-  generatedNeedy: GeneratedNeedy
-): Promise<void> =>
-  saveState({
-    lastGeneratedAt: generatedNeedy.generatedAt,
-    previouslyGenerated: [...currentState.previouslyGenerated, generatedNeedy],
+  gifts: GeneratedGift[]
+): Promise<void> => {
+  const history = [...currentState.history, ...gifts]
+
+  return saveState({
+    history,
+    itemsStatus: history.reduce((items, gift) => {
+      const index = items.findIndex((item) => item.name === gift.name)
+      const oldQuantity = index > -1 ? items[index].giftedCount : 0
+
+      const item = {
+        name: gift.name,
+        giftedCount: oldQuantity + 1,
+      }
+
+      if (index > -1) {
+        items[index] = item
+        return items
+      }
+
+      return [...items, item]
+    }, [] as Item[]),
   })
+}
 
 export const getState = async (): Promise<State> => {
   try {
